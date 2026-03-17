@@ -126,6 +126,77 @@ def delete_email(email_id: str) -> str:
     return json.dumps({"trashed": True, "email_id": email_id})
 
 
+def reply_to_email(email_id: str, body: str) -> str:
+    """Create a draft reply to an email. Does NOT send — user reviews and sends manually."""
+    svc = _services.gmail
+    msg = svc.users().messages().get(
+        userId="me", id=email_id, format="metadata",
+        metadataHeaders=["Subject", "From", "Message-ID", "References"],
+    ).execute()
+
+    subject = _header(msg, "Subject")
+    from_addr = _header(msg, "From")
+    message_id = _header(msg, "Message-ID")
+    references = _header(msg, "References")
+    thread_id = msg.get("threadId", "")
+
+    if not subject.lower().startswith("re:"):
+        subject = f"Re: {subject}"
+
+    mime = MIMEText(body)
+    mime["to"] = from_addr
+    mime["subject"] = subject
+    if message_id:
+        mime["In-Reply-To"] = message_id
+        mime["References"] = f"{references} {message_id}".strip() if references else message_id
+
+    raw = base64.urlsafe_b64encode(mime.as_bytes()).decode()
+    draft = svc.users().drafts().create(
+        userId="me", body={"message": {"raw": raw, "threadId": thread_id}}
+    ).execute()
+    return json.dumps({"created": True, "draft_id": draft["id"], "to": from_addr, "subject": subject})
+
+
+def mark_email_read(email_id: str) -> str:
+    _services.gmail.users().messages().modify(
+        userId="me", id=email_id, body={"removeLabelIds": ["UNREAD"]}
+    ).execute()
+    return json.dumps({"marked_read": True, "email_id": email_id})
+
+
+def mark_email_unread(email_id: str) -> str:
+    _services.gmail.users().messages().modify(
+        userId="me", id=email_id, body={"addLabelIds": ["UNREAD"]}
+    ).execute()
+    return json.dumps({"marked_unread": True, "email_id": email_id})
+
+
+def move_email(email_id: str, destination: str) -> str:
+    """Move an email to a label/folder. destination can be INBOX, SPAM, STARRED, or a custom label name."""
+    svc = _services.gmail
+    system_labels = {"INBOX", "SPAM", "TRASH", "STARRED", "IMPORTANT"}
+    dest_upper = destination.upper()
+
+    if dest_upper in system_labels:
+        label_ids = [dest_upper]
+    else:
+        all_labels = svc.users().labels().list(userId="me").execute().get("labels", [])
+        match = next((l for l in all_labels if l["name"].lower() == destination.lower()), None)
+        if not match:
+            return json.dumps({"error": f"Label '{destination}' not found."})
+        label_ids = [match["id"]]
+
+    msg = svc.users().messages().get(userId="me", id=email_id, format="minimal").execute()
+    current = msg.get("labelIds", [])
+    remove = [l for l in ["INBOX", "SPAM", "TRASH"] if l in current and l not in label_ids]
+
+    svc.users().messages().modify(
+        userId="me", id=email_id,
+        body={"addLabelIds": label_ids, "removeLabelIds": remove},
+    ).execute()
+    return json.dumps({"moved": True, "email_id": email_id, "destination": destination})
+
+
 def bulk_delete_emails(query: str) -> str:
     """Permanently delete emails matching a query. Restricted to Promotions, Updates, and Social only."""
     query_lower = query.lower().strip()
@@ -238,6 +309,52 @@ TOOL_DEFINITIONS += [
         },
     },
     {
+        "name": "reply_to_email",
+        "description": "Create a draft reply to an email. Does NOT send it — the user reviews and sends manually.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "string", "description": "ID of the email to reply to"},
+                "body": {"type": "string", "description": "Plain-text reply body"},
+            },
+            "required": ["email_id", "body"],
+        },
+    },
+    {
+        "name": "mark_email_read",
+        "description": "Mark an email as read.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "string", "description": "The email ID to mark as read"},
+            },
+            "required": ["email_id"],
+        },
+    },
+    {
+        "name": "mark_email_unread",
+        "description": "Mark an email as unread.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "string", "description": "The email ID to mark as unread"},
+            },
+            "required": ["email_id"],
+        },
+    },
+    {
+        "name": "move_email",
+        "description": "Move an email to a different label or folder (e.g. STARRED, IMPORTANT, or a custom label name).",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "string", "description": "The email ID to move"},
+                "destination": {"type": "string", "description": "Label name or system label: INBOX, SPAM, TRASH, STARRED, IMPORTANT, or a custom label"},
+            },
+            "required": ["email_id", "destination"],
+        },
+    },
+    {
         "name": "delete_email",
         "description": (
             "Move a single email to Trash (recoverable). "
@@ -278,6 +395,10 @@ TOOL_REGISTRY.update({
     "create_draft": create_draft,
     "list_drafts": list_drafts,
     "edit_draft": edit_draft,
+    "reply_to_email": reply_to_email,
+    "mark_email_read": mark_email_read,
+    "mark_email_unread": mark_email_unread,
+    "move_email": move_email,
     "delete_email": delete_email,
     "bulk_delete_emails": bulk_delete_emails,
 })

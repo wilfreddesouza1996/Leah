@@ -45,6 +45,7 @@ def initialize_services(settings) -> None:
     # Import tool modules so they register themselves
     import leah.tools.gmail  # noqa: F401
     import leah.tools.calendar  # noqa: F401
+    import leah.tools.tasks  # noqa: F401
 
 
 def execute_tool(name: str, tool_input: dict) -> str:
