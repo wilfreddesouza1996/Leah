@@ -1,4 +1,4 @@
-"""Gmail tools: list, read, search, and send emails."""
+"""Gmail tools: list, read, search emails; create/edit/list drafts; delete emails."""
 
 from __future__ import annotations
 
@@ -7,6 +7,9 @@ import json
 from email.mime.text import MIMEText
 
 from leah.tools import TOOL_DEFINITIONS, TOOL_REGISTRY, _services
+
+# Bulk delete is only permitted for these Gmail categories
+_BULK_ALLOWED = ("category:promotions", "category:updates", "category:social")
 
 
 def _header(msg, name: str) -> str:
@@ -25,6 +28,13 @@ def _body_text(payload: dict) -> str:
         if text:
             return text
     return ""
+
+
+def _make_raw(to: str, subject: str, body: str) -> str:
+    mime = MIMEText(body)
+    mime["to"] = to
+    mime["subject"] = subject
+    return base64.urlsafe_b64encode(mime.as_bytes()).decode()
 
 
 # ── Tool handlers ─────────────────────────────────────────────────────────────
@@ -71,14 +81,83 @@ def search_emails(query: str, max_results: int = 10) -> str:
     return list_emails(max_results=max_results, query=query)
 
 
-def send_email(to: str, subject: str, body: str) -> str:
+def create_draft(to: str, subject: str, body: str) -> str:
     svc = _services.gmail
-    mime = MIMEText(body)
-    mime["to"] = to
-    mime["subject"] = subject
-    raw = base64.urlsafe_b64encode(mime.as_bytes()).decode()
-    sent = svc.users().messages().send(userId="me", body={"raw": raw}).execute()
-    return json.dumps({"sent": True, "id": sent["id"]})
+    draft = svc.users().drafts().create(
+        userId="me", body={"message": {"raw": _make_raw(to, subject, body)}}
+    ).execute()
+    return json.dumps({"created": True, "draft_id": draft["id"], "to": to, "subject": subject})
+
+
+def list_drafts(max_results: int = 10) -> str:
+    svc = _services.gmail
+    result = svc.users().drafts().list(userId="me", maxResults=max_results).execute()
+    drafts = result.get("drafts", [])
+    if not drafts:
+        return json.dumps({"drafts": [], "note": "No drafts found."})
+
+    out = []
+    for d in drafts:
+        draft = svc.users().drafts().get(userId="me", id=d["id"], format="metadata").execute()
+        msg = draft.get("message", {})
+        headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
+        out.append({
+            "draft_id": d["id"],
+            "to": headers.get("To", ""),
+            "subject": headers.get("Subject", "(no subject)"),
+            "snippet": msg.get("snippet", ""),
+        })
+    return json.dumps({"drafts": out})
+
+
+def edit_draft(draft_id: str, to: str, subject: str, body: str) -> str:
+    svc = _services.gmail
+    updated = svc.users().drafts().update(
+        userId="me", id=draft_id,
+        body={"message": {"raw": _make_raw(to, subject, body)}},
+    ).execute()
+    return json.dumps({"updated": True, "draft_id": updated["id"], "to": to, "subject": subject})
+
+
+def delete_email(email_id: str) -> str:
+    """Move a single email to Trash (recoverable)."""
+    svc = _services.gmail
+    svc.users().messages().trash(userId="me", id=email_id).execute()
+    return json.dumps({"trashed": True, "email_id": email_id})
+
+
+def bulk_delete_emails(query: str) -> str:
+    """Permanently delete emails matching a query. Restricted to Promotions, Updates, and Social only."""
+    query_lower = query.lower().strip()
+    if not any(cat in query_lower for cat in _BULK_ALLOWED):
+        return json.dumps({
+            "error": "Bulk delete is only allowed for category:promotions, category:updates, or category:social."
+        })
+
+    svc = _services.gmail
+    all_ids = []
+    page_token = None
+    while True:
+        params = {"userId": "me", "q": query, "maxResults": 500}
+        if page_token:
+            params["pageToken"] = page_token
+        result = svc.users().messages().list(**params).execute()
+        batch = result.get("messages", [])
+        all_ids.extend(m["id"] for m in batch)
+        page_token = result.get("nextPageToken")
+        if not page_token:
+            break
+
+    if not all_ids:
+        return json.dumps({"deleted": 0, "note": "No messages found matching that query."})
+
+    # batchDelete accepts up to 1000 ids at a time
+    for i in range(0, len(all_ids), 1000):
+        svc.users().messages().batchDelete(
+            userId="me", body={"ids": all_ids[i:i + 1000]}
+        ).execute()
+
+    return json.dumps({"deleted": len(all_ids), "query": query})
 
 
 # ── Tool definitions ──────────────────────────────────────────────────────────
@@ -115,15 +194,15 @@ TOOL_DEFINITIONS += [
         "input_schema": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "Gmail search query, e.g. 'from:boss@hospital.org subject:schedule'"},
+                "query": {"type": "string", "description": "Gmail search query"},
                 "max_results": {"type": "integer", "description": "Number of results to return (default 10)"},
             },
             "required": ["query"],
         },
     },
     {
-        "name": "send_email",
-        "description": "Send an email from the user's Gmail account.",
+        "name": "create_draft",
+        "description": "Create a new draft email. Does NOT send it — the user reviews and sends manually.",
         "input_schema": {
             "type": "object",
             "properties": {
@@ -134,11 +213,71 @@ TOOL_DEFINITIONS += [
             "required": ["to", "subject", "body"],
         },
     },
+    {
+        "name": "list_drafts",
+        "description": "List existing email drafts. Returns draft ID, recipient, subject, and snippet.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "max_results": {"type": "integer", "description": "Number of drafts to return (default 10)"},
+            },
+        },
+    },
+    {
+        "name": "edit_draft",
+        "description": "Edit an existing draft. Replaces the current content with the new values provided.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "draft_id": {"type": "string", "description": "The draft ID from list_drafts"},
+                "to": {"type": "string", "description": "Recipient email address"},
+                "subject": {"type": "string", "description": "Email subject line"},
+                "body": {"type": "string", "description": "Plain-text email body"},
+            },
+            "required": ["draft_id", "to", "subject", "body"],
+        },
+    },
+    {
+        "name": "delete_email",
+        "description": (
+            "Move a single email to Trash (recoverable). "
+            "IMPORTANT: Only call this after confirming the subject and first few lines with the user."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "email_id": {"type": "string", "description": "The email ID to trash"},
+            },
+            "required": ["email_id"],
+        },
+    },
+    {
+        "name": "bulk_delete_emails",
+        "description": (
+            "Permanently delete all emails matching a Gmail query. "
+            "ONLY allowed for category:promotions, category:updates, or category:social. "
+            "Will be rejected for any other query."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "Must include category:promotions, category:updates, or category:social",
+                },
+            },
+            "required": ["query"],
+        },
+    },
 ]
 
 TOOL_REGISTRY.update({
     "list_emails": list_emails,
     "read_email": read_email,
     "search_emails": search_emails,
-    "send_email": send_email,
+    "create_draft": create_draft,
+    "list_drafts": list_drafts,
+    "edit_draft": edit_draft,
+    "delete_email": delete_email,
+    "bulk_delete_emails": bulk_delete_emails,
 })
