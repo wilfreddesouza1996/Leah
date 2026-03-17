@@ -3,7 +3,7 @@ import anthropic
 from leah.config import settings
 from leah.memory import ConversationMemory
 from leah.personality import get_system_prompt
-from leah.tools import TOOL_DEFINITIONS, execute_tool
+from leah.tools import TOOL_DEFINITIONS, execute_tool, initialize_services
 
 
 class LeahAgent:
@@ -12,6 +12,7 @@ class LeahAgent:
     def __init__(self) -> None:
         self.client = anthropic.Anthropic(api_key=settings.anthropic_api_key)
         self.memory = ConversationMemory(max_messages=settings.leah_max_memory_messages)
+        initialize_services(settings)
 
     def chat(self, user_input: str) -> str:
         """Send a user message and return Leah's final text response.

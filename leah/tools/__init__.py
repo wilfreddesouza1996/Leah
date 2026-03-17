@@ -42,6 +42,10 @@ def initialize_services(settings) -> None:
     _services.docs = build_docs_service(creds)
     _services.tasks = build_tasks_service(creds)
 
+    # Import tool modules so they register themselves
+    import leah.tools.gmail  # noqa: F401
+    import leah.tools.calendar  # noqa: F401
+
 
 def execute_tool(name: str, tool_input: dict) -> str:
     """Dispatch a tool call from Claude to the registered handler."""
