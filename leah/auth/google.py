@@ -10,10 +10,8 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 
 SCOPES = [
-    # Gmail
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/gmail.compose",
+    # Gmail — full access required for permanent deletion (batchDelete)
+    "https://www.googleapis.com/auth/gmail",
     # Calendar
     "https://www.googleapis.com/auth/calendar",
     # Tasks
