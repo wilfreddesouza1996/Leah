@@ -11,7 +11,7 @@ from googleapiclient.discovery import build
 
 SCOPES = [
     # Gmail — full access required for permanent deletion (batchDelete)
-    "https://www.googleapis.com/auth/gmail",
+    "https://mail.google.com/",
     # Calendar
     "https://www.googleapis.com/auth/calendar",
     # Tasks
