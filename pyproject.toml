@@ -17,10 +17,13 @@ dependencies = [
     # CLI
     "rich>=13.9.0",
     "prompt_toolkit>=3.0.48",
+    # Telegram
+    "python-telegram-bot>=20.0",
 ]
 
 [project.scripts]
 leah = "leah.main:main"
+leah-telegram = "leah.telegram_bot:main"
 
 [build-system]
 requires = ["hatchling"]

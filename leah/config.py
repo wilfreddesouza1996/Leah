@@ -16,5 +16,8 @@ class Settings(BaseSettings):
     leah_user_name: str = "there"
     leah_max_memory_messages: int = 100
 
+    telegram_bot_token: str | None = None
+    telegram_allowed_user_id: int | None = None
+
 
 settings = Settings()
