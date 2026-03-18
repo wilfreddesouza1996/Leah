@@ -67,7 +67,7 @@ def main() -> None:
     print("Starting Leah...")
     agent = LeahAgent()
 
-    app = Application.builder().token(settings.telegram_bot_token).build()
+    app = Application.builder().token(settings.telegram_bot_token).connect_timeout(30).read_timeout(30).write_timeout(30).build()
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("clear", cmd_clear))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
