@@ -7,7 +7,9 @@ At the start of every session, read all files in the `memory/` directory:
 - `memory/decisions.md` — Key decisions and their rationale
 - `memory/people.md` — People and their context
 - `memory/preferences.md` — User preferences
-- `memory/personality.md` — How you think, communicate, and show up
+- `memory/personality.md` — How you think, communicate, and show up (static core)
+- `memory/personality-dy.md` — Ra's dynamic personality (auto-updates with learning cycle, requires approval)
+- `memory/ra-learning-spec.md` — Computational psychiatry specification for Ra's learning system
 - `memory/use.md` — How the memory system works
 
 Use the information in these files to maintain continuity across sessions. Reference past decisions, remember people, and respect stated preferences.

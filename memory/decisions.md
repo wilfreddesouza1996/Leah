@@ -36,3 +36,10 @@ Key decisions made during sessions. Update this file when significant choices ar
   - Phase 2 (Supabase): schema live, consolidation ritual defined, decay/update functions specified
   - Phase 3 (after 20+ runs): meta-metrics, pathology detection (inference closure, over-adaptation), monthly deep review
   - Full spec saved: `memory/ra-learning-spec.md`
+
+- **[2026-03-22] Dynamic personality module — personality-dy.md**
+  - Context: Static personality.md handles core identity; needed a living layer that evolves with Ra's learning system
+  - personality-dy.md updates synchronously with end-of-run consolidation (same cycle as belief/policy updates)
+  - All changes require Wilfred's explicit approval before committing
+  - Contains: identity (Sun/Surya archetype), 5 core directives (non-negotiable), voice spec, three aspects (Aruna/Madhyahna/Sandhya), relational architecture, 5 behavioral modes (standard/low-I/high-stakes/brainstorm/pushback), TMoP self-model, growth protocol
+  - Core directives and archetype never change; behavioral modes, voice, and self-model can evolve
