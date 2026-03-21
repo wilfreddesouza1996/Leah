@@ -1,0 +1,19 @@
+{
+  "name": "leah",
+  "version": "1.0.0",
+  "description": "Code assistant",
+  "main": "index.js",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://local_proxy@127.0.0.1:42213/git/wilfreddesouza1996/Leah"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}
