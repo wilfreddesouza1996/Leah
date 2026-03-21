@@ -38,8 +38,8 @@ fi
 
 TODAY=$(date '+%A, %B %d, %Y')
 
-# Build the prompt for Claude
-PROMPT="$(cat <<PROMPT_EOF
+# Build the prompt — instruct Claude to TRY MCP tools, fall back gracefully
+read -r -d '' PROMPT <<PROMPT_EOF || true
 You are generating a morning briefing. Today is $TODAY.
 
 Here is the current state of memory and tasks:
@@ -47,40 +47,41 @@ Here is the current state of memory and tasks:
 $CONTEXT
 
 Instructions:
-1. First, use the Google Calendar tool (gcal_list_events) to check today's calendar events.
-2. Then, use the Gmail tool (gmail_search_messages) to check for important recent emails from the last 24 hours.
-3. Based on ALL of this — memory files, active tasks, calendar, and email — generate a morning briefing.
+1. Try to use gcal_list_events to check today's calendar. If the tool is unavailable or errors, skip with "Calendar not connected."
+2. Try to use gmail_search_messages to check recent emails (last 24h). If unavailable or errors, skip with "Email not connected."
+3. Generate the briefing from whatever data you have. Memory and todos are always available.
 
-Format the briefing EXACTLY as a Slack message using this structure (use Slack mrkdwn, not markdown):
+Format as a Slack message (Slack mrkdwn, NOT markdown):
 
 *Morning Briefing — $TODAY*
 
 *Where You Left Off*
-[1-2 sentences on what was last being worked on, based on active.md and memory]
+[1-2 sentences from active.md and memory files]
 
 *Today's Calendar*
-[List today's events with times. If none, say "Clear day — no meetings."]
+[Events with times, or "Calendar not connected." / "Clear day — no meetings."]
 
 *Inbox Highlights*
-[2-3 notable emails if any. If nothing important, say "Nothing urgent."]
+[2-3 notable emails, or "Email not connected." / "Nothing urgent."]
 
 *3 Priorities for Today*
-1. [most important thing]
-2. [second priority]
-3. [third priority]
+1. [most important]
+2. [second]
+3. [third]
 
 *One Thing to Watch*
-[Something from the memory files — a pattern, a reminder, something worth noticing today]
+[A pattern, reminder, or thing worth noticing from memory files]
 
-Output ONLY the briefing text. No explanation, no preamble.
+Output ONLY the briefing text. No preamble, no explanation, no markdown fences.
 PROMPT_EOF
-)"
 
 log "Running claude to generate briefing"
 
-# Run claude in non-interactive mode with the project context
+# --print: non-interactive output only
+# --dangerously-skip-permissions: no interactive prompts in headless mode
+# Run from project dir so CLAUDE.md and .mcp.json are picked up
 BRIEFING=$(cd "$PROJECT_DIR" && claude --print --dangerously-skip-permissions "$PROMPT" 2>>"$LOG_FILE") || {
-  log "ERROR: claude command failed"
+  log "ERROR: claude command failed (exit $?)"
   exit 1
 }
 
@@ -89,22 +90,25 @@ if [[ -z "$BRIEFING" ]]; then
   exit 1
 fi
 
-log "Briefing generated, sending to Slack"
+log "Briefing generated ($(echo "$BRIEFING" | wc -c) bytes), sending to Slack"
 
-# Escape the briefing for JSON
-ESCAPED_BRIEFING=$(echo "$BRIEFING" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
+# Escape for JSON safely
+ESCAPED_BRIEFING=$(printf '%s' "$BRIEFING" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')
 
 # Post to Slack
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+HTTP_RESPONSE=$(curl -s -w "\n%{http_code}" \
   -X POST \
   -H 'Content-type: application/json' \
   --data "{\"text\": ${ESCAPED_BRIEFING}}" \
   "$SLACK_WEBHOOK_URL")
 
+HTTP_BODY=$(echo "$HTTP_RESPONSE" | head -n -1)
+HTTP_CODE=$(echo "$HTTP_RESPONSE" | tail -1)
+
 if [[ "$HTTP_CODE" == "200" ]]; then
   log "Briefing sent to Slack successfully"
 else
-  log "ERROR: Slack returned HTTP $HTTP_CODE"
+  log "ERROR: Slack returned HTTP $HTTP_CODE — $HTTP_BODY"
   exit 1
 fi
 
