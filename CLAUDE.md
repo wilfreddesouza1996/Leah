@@ -24,7 +24,7 @@ Before ending a session, review what happened and update the memory files with a
 
 Two systems exist — keep them in sync:
 
-1. **`todos/active.md`** — Markdown file for the morning briefing and quick reference
+1. **`todos/active.md`** — Markdown file for quick reference
 2. **Supabase `todos` table** — Real-time dashboard at `/dashboard` (project: `leah-todos`, id: `swnhmrljpafvaojaytkv`)
 
 When completing a task, update both: mark it done in Supabase (`status = 'done'`) and move it to "Recently Completed" in `active.md`.

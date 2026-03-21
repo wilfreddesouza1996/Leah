@@ -15,11 +15,8 @@ Key decisions made during sessions. Update this file when significant choices ar
   - Structure: memory/ directory with decisions.md, people.md, preferences.md, personality.md, use.md
   - Stop hook injects reminder to update memory before session ends
 
-- **[2026-03-21] Morning briefing via claude --print + Slack webhook**
-  - Context: Daily 8AM briefing that reads memory, todos, calendar, and email
-  - Approach: Shell script runs `claude --print` with a prompt that uses Google Calendar and Gmail MCP tools, posts result to Slack via webhook
-  - Scheduling: systemd user timer (with cron fallback)
-  - Slack webhook stored in .env (gitignored)
+- **[2026-03-21] Morning briefing — deferred**
+  - Context: Planned daily 8AM briefing via claude --print + Slack webhook. Removed for now, will revisit later.
 
 - **[2026-03-21] Real-time todo dashboard — Next.js + Supabase**
   - Context: Needed a live dashboard where agents can update task status and it reflects instantly
