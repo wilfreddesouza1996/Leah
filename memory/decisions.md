@@ -43,3 +43,10 @@ Key decisions made during sessions. Update this file when significant choices ar
   - All changes require Wilfred's explicit approval before committing
   - Contains: identity (Sun/Surya archetype), 5 core directives (non-negotiable), voice spec, three aspects (Aruna/Madhyahna/Sandhya), relational architecture, 5 behavioral modes (standard/low-I/high-stakes/brainstorm/pushback), TMoP self-model, growth protocol
   - Core directives and archetype never change; behavioral modes, voice, and self-model can evolve
+
+- **[2026-03-21] Created /NoteToNotion skill**
+  - Context: Wilfred needs a way to produce exhaustive, research-backed Notion notes in his exact formatting style
+  - Formatting spec extracted from "History Taking in Child Psychiatry" Notion page — attribution header, deep heading hierarchy, clinical significance subsections, tables, blockquotes, numbered references
+  - Self-contained research: uses academic search + PubMed + clinical trials MCP tools directly (no /resident dependency)
+  - Output is paste-ready markdown — user copies output into Notion, renders correctly
+  - File: `.claude/commands/NoteToNotion.md`
