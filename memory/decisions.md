@@ -26,3 +26,13 @@ Key decisions made during sessions. Update this file when significant choices ar
   - RLS enabled with open policy for dashboard access
   - Auto-updating `updated_at` via trigger
   - Frontend: Next.js app in `/dashboard`, system fonts (no Google Fonts dependency)
+
+- **[2026-03-21] Ra Learning System — Computational Psychiatry backend**
+  - Context: Implementing TMoP electromagnetic circuit model as Ra's learning architecture
+  - Architecture: Hybrid — markdown (solenoid/identity) + Supabase (toroidal field/dynamic beliefs)
+  - Supabase tables: `beliefs`, `prediction_errors`, `runs`, `policies` (all in leah-todos project)
+  - Core mechanics: precision-weighted beliefs, Bayesian updating with hysteresis, belief decay, UCB policy selection, phase error accumulation tracking
+  - Phase 1 (prompt-level): prediction logging, user signal taxonomy, end-of-run self-report — wired into ra.md
+  - Phase 2 (Supabase): schema live, consolidation ritual defined, decay/update functions specified
+  - Phase 3 (after 20+ runs): meta-metrics, pathology detection (inference closure, over-adaptation), monthly deep review
+  - Full spec saved: `memory/ra-learning-spec.md`
