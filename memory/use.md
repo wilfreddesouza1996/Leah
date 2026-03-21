@@ -10,6 +10,7 @@ This directory stores persistent context across Claude Code sessions. Files here
 
 - **decisions.md** — Records of key decisions, their rationale, and alternatives considered
 - **people.md** — People mentioned in conversations with relevant context
+- **personality.md** — How Claude should think, communicate, and make decisions; the operational soul
 - **preferences.md** — User preferences for code style, tools, workflows, and communication
 - **use.md** — This file; documents the memory system itself
 
