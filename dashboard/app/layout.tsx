@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Leah — Todos",
+  title: "Ra — Todos",
   description: "Real-time task dashboard",
 };
 
