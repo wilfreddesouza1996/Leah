@@ -1,0 +1,9 @@
+# Raw sparrow source files (images/PDFs) — may be large or private.
+# Drop your dated files here and regenerate the calendar; see README.
+assets/sparrows/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
